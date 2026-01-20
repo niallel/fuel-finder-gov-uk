@@ -1,6 +1,6 @@
 {
   "name": "fuel-finder-gov-uk",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "TypeScript SDK for the UK Government Fuel Finder Recipient Service.",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -17,6 +17,12 @@
     "sdk",
     "typescript"
   ],
+  "author": "Niall El-Assaad",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/niallel/fuel-finder-gov-uk.git"
+  },
+  "homepage": "https://github.com/niallel/fuel-finder-gov-uk#readme",
   "files": [
     "dist"
   ],

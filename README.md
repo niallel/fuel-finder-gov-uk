@@ -1,6 +1,6 @@
-# Fuel Finder SDK (JavaScript, written in TypeScript)
+# Fuel Finder SDK
 
-Lightweight TypeScript client for the UK Government Fuel Finder endpoints. It wraps the OAuth access-token API for generating and regenerating access tokens.
+Lightweight Javascript/TypeScript client for the UK Government Fuel Finder endpoints. It wraps the OAuth access-token API for generating and regenerating access tokens.
 
 https://www.register-fuel-finder-scheme.service.gov.uk
 
