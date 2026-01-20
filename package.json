@@ -1,0 +1,35 @@
+{
+  "name": "fuel-finder-gov-uk",
+  "version": "0.1.0",
+  "description": "TypeScript SDK for the UK Government Fuel Finder Recipient Service.",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "lint": "tsc --noEmit -p tsconfig.json",
+    "test": "npm run build && vitest run --config vitest.config.ts",
+    "prepare": "npm run build"
+  },
+  "keywords": [
+    "fuel-finder",
+    "oauth",
+    "uk",
+    "sdk",
+    "typescript"
+  ],
+  "files": [
+    "dist"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "license": "MIT",
+  "devDependencies": {
+    "dotenv": "^17.2.3",
+    "vitest": "^4.0.17",
+    "typescript": "^5.9.3"
+  }
+}

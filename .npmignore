@@ -1,0 +1,9 @@
+.env
+src
+tests
+vitest.config.ts
+tsconfig.json
+.gitignore
+.dist
+npm-debug.log*
+*.log
