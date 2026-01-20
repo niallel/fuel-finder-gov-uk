@@ -223,9 +223,9 @@ export class FuelFinderClient {
    * @param dateTime Date or timestamp string used by the API for incremental updates.
    * @returns Fuel prices wrapped in the standard API envelope.
    */
-  async getIncrementalPFSFuelPrices(dateTime: string): Promise<PFSFuelPricesResponse> {
+  async getIncrementalPFSFuelPrices(dateTime: string | Date): Promise<PFSFuelPricesResponse> {
     return this.authenticatedGet<PFSFuelPricesResponse>("/api/v1/pfs/fuel-prices", {
-      date_time: dateTime,
+      "effective-start-timestamp": this.formatEffectiveStartTimestamp(dateTime),
     });
   }
 
@@ -242,8 +242,10 @@ export class FuelFinderClient {
    * @param dateTime Date or timestamp string used by the API for incremental updates.
    * @returns Station metadata wrapped in the standard API envelope.
    */
-  async getIncrementalPFSInfo(dateTime: string): Promise<PFSInfoResponse> {
-    return this.authenticatedGet<PFSInfoResponse>("/api/v1/pfs", { date_time: dateTime });
+  async getIncrementalPFSInfo(dateTime: string | Date): Promise<PFSInfoResponse> {
+    return this.authenticatedGet<PFSInfoResponse>("/api/v1/pfs", {
+      "effective-start-timestamp": this.formatEffectiveStartTimestamp(dateTime),
+    });
   }
 
   /**
@@ -369,5 +371,33 @@ export class FuelFinderClient {
         clearTimeout(timeout);
       }
     }
+  }
+
+  /**
+   * Normalize an incremental query timestamp into the API's expected format.
+   */
+  private formatEffectiveStartTimestamp(dateTime: string | Date): string {
+    if (typeof dateTime === "string") {
+      if (!this.isFullTimestamp(dateTime)) {
+        throw new Error(
+          "Invalid timestamp format for effective-start-timestamp. Expected YYYY-MM-DD HH:MM:SS.",
+        );
+      }
+      return dateTime;
+    }
+
+    if (Number.isNaN(dateTime.getTime())) {
+      throw new Error("Invalid Date provided for effective-start-timestamp.");
+    }
+
+    // API expects YYYY-MM-DD HH:MM:SS; use UTC to avoid implicit timezone shifts.
+    return dateTime.toISOString().replace("T", " ").replace(/\.\d{3}Z$/, "");
+  }
+
+  /**
+   * Ensure timestamp includes full date and time as required by the API.
+   */
+  private isFullTimestamp(dateTime: string): boolean {
+    return /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/.test(dateTime);
   }
 }

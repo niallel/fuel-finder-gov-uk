@@ -62,11 +62,20 @@ new FuelFinderClient({
 - If a refresh token is available, it will attempt `regenerateAccessToken` when the access token expires.
 - You can manually fetch and cache the current token up front with `getAccessToken()`.
 
+### Token handling
+- `getAccessToken()` — ensures a valid access token is available and returns it
+
 ### Data fetchers (all use `Authorization: Bearer <token>` with the managed access token)
-- `getAllPFSFuelPrices()`
-- `getIncrementalPFSFuelPrices(dateTime: string)` — date string (e.g., `2025-09-05`)
-- `getPFSInfo()`
-- `getIncrementalPFSInfo(dateTime: string)`
+- `getAllPFSFuelPrices()` — fetches all fuel prices
+- `getIncrementalPFSFuelPrices(dateTime: string | Date)` — fetches fuel prices updated since the timestamp; requires `YYYY-MM-DD HH:MM:SS`, or `Date` is converted to that format in UTC
+- `getPFSInfo()` — fetches all station metadata
+- `getIncrementalPFSInfo(dateTime: string | Date)` — fetches station metadata updated since the timestamp; requires `YYYY-MM-DD HH:MM:SS`, or `Date` is converted to that format in UTC
+
+## API surface (FuelFinderAuthClient)
+
+### Token generation and refresh
+- `generateAccessToken(payload: GenerateAccessTokenRequest)` — exchanges client credentials for an access token
+- `regenerateAccessToken(payload: RegenerateAccessTokenRequest)` — exchanges a refresh token for a new access token
 
 ## Error handling
 

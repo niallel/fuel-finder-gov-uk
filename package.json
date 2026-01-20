@@ -5,9 +5,11 @@
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {
-    "build": "tsc -p tsconfig.json",
+    "build": "npm run build:only && npm run test:only",
+    "build:only": "tsc -p tsconfig.json",
     "lint": "tsc --noEmit -p tsconfig.json",
-    "test": "npm run build && vitest run --config vitest.config.ts",
+    "test": "npm run build:only && npm run test:only",
+    "test:only": "vitest run --config vitest.config.ts",
     "prepare": "npm run build"
   },
   "keywords": [
