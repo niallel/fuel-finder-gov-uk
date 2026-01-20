@@ -1,7 +1,7 @@
 {
   "name": "fuel-finder-gov-uk",
-  "version": "0.1.1",
-  "description": "TypeScript SDK for the UK Government Fuel Finder Recipient Service.",
+  "version": "0.2.0",
+  "description": "Javascript SDK for the UK Government Fuel Finder Recipient Service.",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {
