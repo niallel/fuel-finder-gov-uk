@@ -31,7 +31,7 @@ This repo is a TypeScript SDK for the UK Government Fuel Finder API. Use this fi
 - `FuelFinderApiError` and all types from `src/types.ts`.
 
 ## API behavior and invariants
-- Base URL defaults to `https://www.register-fuel-finder-scheme.service.gov.uk`.
+- Base URL defaults to `https://www.fuel-finder.service.gov.uk/`.
 - Trailing slashes are stripped from `baseUrl` once and then used consistently.
 - OAuth requests are JSON `POST` with snake_case fields required by the API.
 - PFS requests are JSON `GET` and use `Authorization: <tokenType> <accessToken>`.

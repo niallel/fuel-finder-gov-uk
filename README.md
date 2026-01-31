@@ -2,7 +2,7 @@
 
 Lightweight Javascript/TypeScript client for the UK Government Fuel Finder endpoints. It wraps the OAuth access-token API for generating and regenerating access tokens.
 
-https://www.register-fuel-finder-scheme.service.gov.uk
+https://www.fuel-finder.service.gov.uk/
 
 ## Installation
 
@@ -12,7 +12,7 @@ npm install fuel-finder-gov-uk
 
 Node.js 18+ is recommended because it provides a native `fetch` implementation.
 
-To register for credentials, visit https://www.register-fuel-finder-scheme.service.gov.uk.
+To register for credentials, visit https://www.fuel-finder.service.gov.uk/.
 
 ## Usage
 
@@ -31,10 +31,10 @@ async function main() {
 
   // The client will lazily fetch and refresh the access token as needed.
   const allPrices = await client.getAllPFSFuelPrices();
-  console.log("Prices count:", allPrices.data.data.length);
+  console.log("Prices count:", allPrices.length);
 
   const stationInfo = await client.getPFSInfo();
-  console.log("Station count:", stationInfo.data.data.length);
+  console.log("Station count:", stationInfo.length);
 }
 
 main().catch((err) => {
@@ -51,7 +51,7 @@ main().catch((err) => {
 new FuelFinderClient({
   clientId: string;        // required
   clientSecret: string;    // required
-  baseUrl?: string;        // defaults to https://www.register-fuel-finder-scheme.service.gov.uk
+  baseUrl?: string;        // defaults to https://www.fuel-finder.service.gov.uk
   fetch?: typeof fetch;    // override fetch (for tests or custom transport)
   timeoutMs?: number;      // optional request timeout
 })
@@ -66,10 +66,10 @@ new FuelFinderClient({
 - `getAccessToken()` — ensures a valid access token is available and returns it
 
 ### Data fetchers (all use `Authorization: Bearer <token>` with the managed access token)
-- `getAllPFSFuelPrices()` — fetches all fuel prices
-- `getIncrementalPFSFuelPrices(dateTime: string | Date)` — fetches fuel prices updated since the timestamp; requires `YYYY-MM-DD HH:MM:SS`, or `Date` is converted to that format in UTC
-- `getPFSInfo()` — fetches all station metadata
-- `getIncrementalPFSInfo(dateTime: string | Date)` — fetches station metadata updated since the timestamp; requires `YYYY-MM-DD HH:MM:SS`, or `Date` is converted to that format in UTC
+- `getAllPFSFuelPrices()` — fetches all fuel prices across all batches
+- `getIncrementalPFSFuelPrices(dateTime: string | Date)` — fetches fuel prices updated since the timestamp across all batches; requires `YYYY-MM-DD HH:MM:SS`, or `Date` is converted to that format in UTC
+- `getPFSInfo()` — fetches all station metadata across all batches
+- `getIncrementalPFSInfo(dateTime: string | Date)` — fetches station metadata updated since the timestamp across all batches; requires `YYYY-MM-DD HH:MM:SS`, or `Date` is converted to that format in UTC
 
 ## API surface (FuelFinderAuthClient)
 

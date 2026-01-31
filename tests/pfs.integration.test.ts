@@ -6,33 +6,42 @@ const client = new FuelFinderClient({
   clientSecret: process.env.FUEL_FINDER_CLIENT_SECRET as string,
 });
 
+const assertFuelPricesResponse = (res: unknown) => {
+  expect(Array.isArray(res)).toBe(true);
+  if (Array.isArray(res) && res.length > 0) {
+    const station = res[0] as { node_id?: string; fuel_prices?: unknown[] };
+    expect(typeof station.node_id).toBe("string");
+    expect(Array.isArray(station.fuel_prices)).toBe(true);
+  }
+};
+
+const assertPfsInfoResponse = (res: unknown) => {
+  expect(Array.isArray(res)).toBe(true);
+  if (Array.isArray(res) && res.length > 0) {
+    const station = res[0] as { node_id?: string };
+    expect(typeof station.node_id).toBe("string");
+  }
+};
+
 test("fetch all PFS fuel prices", async () => {
   const res = await client.getAllPFSFuelPrices();
-  expect(res.data).toBeDefined();
-  expect(res.data.data).toBeDefined();
-  expect(Array.isArray(res.data.data)).toBe(true);
+  assertFuelPricesResponse(res);
 });
 
 test("fetch incremental PFS fuel prices", async () => {
   const res = await client.getIncrementalPFSFuelPrices("2025-09-05 00:00:00");
-  expect(res.data).toBeDefined();
-  expect(res.data.data).toBeDefined();
-  expect(Array.isArray(res.data.data)).toBe(true);
+  assertFuelPricesResponse(res);
 });
 
 test("fetch PFS info", async () => {
   const res = await client.getPFSInfo();
-  expect(res.data).toBeDefined();
-  expect(res.data.data).toBeDefined();
-  expect(Array.isArray(res.data.data)).toBe(true);
-}, 15000);
+  assertPfsInfoResponse(res);
+});
 
 test("fetch incremental PFS info", async () => {
   const res = await client.getIncrementalPFSInfo("2025-09-05 00:00:00");
-  expect(res.data).toBeDefined();
-  expect(res.data.data).toBeDefined();
-  expect(Array.isArray(res.data.data)).toBe(true);
-}, 15000);
+  assertPfsInfoResponse(res);
+});
 
 test("rejects unauthorized when token is invalid", async () => {
   const badClient = new FuelFinderClient({
@@ -45,17 +54,13 @@ test("rejects unauthorized when token is invalid", async () => {
 
 test("accepts Date for incremental PFS fuel prices", async () => {
   const res = await client.getIncrementalPFSFuelPrices(new Date("2025-09-05T00:00:00Z"));
-  expect(res.data).toBeDefined();
-  expect(res.data.data).toBeDefined();
-  expect(Array.isArray(res.data.data)).toBe(true);
+  assertFuelPricesResponse(res);
 });
 
 test("accepts Date for incremental PFS info", async () => {
   const res = await client.getIncrementalPFSInfo(new Date("2025-09-05T00:00:00Z"));
-  expect(res.data).toBeDefined();
-  expect(res.data.data).toBeDefined();
-  expect(Array.isArray(res.data.data)).toBe(true);
-}, 15000);
+  assertPfsInfoResponse(res);
+});
 
 test("rejects invalid timestamp strings for incremental fuel prices", async () => {
   await expect(client.getIncrementalPFSFuelPrices("2025-09-05")).rejects.toThrow(

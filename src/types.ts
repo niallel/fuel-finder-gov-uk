@@ -139,7 +139,7 @@ export interface FuelFinderEnvelope<T> {
 
 // Price entry for a specific fuel type at a station.
 export interface PFSFuelPriceEntry {
-  price: number | null;
+  price: string | null;
   fuel_type: string;
   price_last_updated: string | null;
 }
@@ -153,6 +153,6 @@ export interface PFSFuelPriceStation {
   fuel_prices: PFSFuelPriceEntry[];
 }
 
-export type PFSFuelPricesResponse = FuelFinderEnvelope<PFSFuelPriceStation[]>;
+export type PFSFuelPricesResponse = PFSFuelPriceStation[];
 
-export type PFSInfoResponse = FuelFinderEnvelope<PFSStationInfo[]>;
+export type PFSInfoResponse = PFSStationInfo[];

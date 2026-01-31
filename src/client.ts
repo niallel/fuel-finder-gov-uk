@@ -13,7 +13,7 @@ import {
   PFSInfoResponse,
 } from "./types";
 
-const DEFAULT_BASE_URL = "https://www.register-fuel-finder-scheme.service.gov.uk";
+const DEFAULT_BASE_URL = "https://www.fuel-finder.service.gov.uk";
 
 interface TokenCache {
   accessToken: string;
@@ -211,41 +211,37 @@ export class FuelFinderClient {
   }
 
   /**
-   * Fetch all fuel prices from the PFS endpoint.
-   * @returns Fuel prices wrapped in the standard API envelope.
+   * Fetch all fuel prices from the PFS endpoint, walking batches until empty.
+   * @returns All fuel prices across all batches.
    */
   async getAllPFSFuelPrices(): Promise<PFSFuelPricesResponse> {
-    return this.authenticatedGet<PFSFuelPricesResponse>("/api/v1/pfs/fuel-prices");
+    return this.fetchAllFuelPriceBatches();
   }
 
   /**
    * Fetch fuel prices updated since the provided date/time.
    * @param dateTime Date or timestamp string used by the API for incremental updates.
-   * @returns Fuel prices wrapped in the standard API envelope.
+   * @returns Fuel prices for all batches updated since the provided timestamp.
    */
   async getIncrementalPFSFuelPrices(dateTime: string | Date): Promise<PFSFuelPricesResponse> {
-    return this.authenticatedGet<PFSFuelPricesResponse>("/api/v1/pfs/fuel-prices", {
-      "effective-start-timestamp": this.formatEffectiveStartTimestamp(dateTime),
-    });
+    return this.fetchAllFuelPriceBatches(this.formatEffectiveStartTimestamp(dateTime));
   }
 
   /**
    * Fetch station metadata from the PFS info endpoint.
-   * @returns Station metadata wrapped in the standard API envelope.
+   * @returns Station metadata across all batches.
    */
   async getPFSInfo(): Promise<PFSInfoResponse> {
-    return this.authenticatedGet<PFSInfoResponse>("/api/v1/pfs/");
+    return this.fetchAllPFSInfoBatches();
   }
 
   /**
    * Fetch station metadata updated since the provided date/time.
    * @param dateTime Date or timestamp string used by the API for incremental updates.
-   * @returns Station metadata wrapped in the standard API envelope.
+   * @returns Station metadata across all batches updated since the provided timestamp.
    */
   async getIncrementalPFSInfo(dateTime: string | Date): Promise<PFSInfoResponse> {
-    return this.authenticatedGet<PFSInfoResponse>("/api/v1/pfs", {
-      "effective-start-timestamp": this.formatEffectiveStartTimestamp(dateTime),
-    });
+    return this.fetchAllPFSInfoBatches(this.formatEffectiveStartTimestamp(dateTime));
   }
 
   /**
@@ -399,5 +395,110 @@ export class FuelFinderClient {
    */
   private isFullTimestamp(dateTime: string): boolean {
     return /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/.test(dateTime);
+  }
+
+  /**
+   * Build the batch-number query parameter for paginated fuel prices.
+   */
+  private buildBatchNumberQuery(batchNumber?: number): Record<string, string> {
+    if (batchNumber === undefined) {
+      return {};
+    }
+    if (!Number.isInteger(batchNumber) || batchNumber <= 0) {
+      throw new Error("batchNumber must be a positive integer.");
+    }
+    return { "batch-number": String(batchNumber) };
+  }
+
+  /**
+   * Fetch all fuel price batches until the API returns an empty array.
+   */
+  private async fetchAllFuelPriceBatches(
+    effectiveStartTimestamp?: string,
+  ): Promise<PFSFuelPricesResponse> {
+    const allStations: PFSFuelPricesResponse = [];
+    let batchNumber = 1;
+    const batchSize = 500;
+
+    while (true) {
+      const query: Record<string, string> = {
+        ...this.buildBatchNumberQuery(batchNumber),
+      };
+      if (effectiveStartTimestamp) {
+        query["effective-start-timestamp"] = effectiveStartTimestamp;
+      }
+
+      const batch = await this.authenticatedGet<PFSFuelPricesResponse>(
+        "/api/v1/pfs/fuel-prices",
+        query,
+      );
+
+      if (batch.length === 0) {
+        break;
+      }
+
+      allStations.push(...batch);
+      if (batch.length < batchSize) {
+        break;
+      }
+      batchNumber += 1;
+    }
+
+    return allStations;
+  }
+
+  /**
+   * Fetch all PFS info batches until the API returns an empty array.
+   */
+  private async fetchAllPFSInfoBatches(
+    effectiveStartTimestamp?: string,
+  ): Promise<PFSInfoResponse> {
+    const allStations: PFSInfoResponse = [];
+    let batchNumber = 1;
+    const batchSize = 500;
+
+    while (true) {
+      const query: Record<string, string> = {
+        ...this.buildBatchNumberQuery(batchNumber),
+      };
+      if (effectiveStartTimestamp) {
+        query["effective-start-timestamp"] = effectiveStartTimestamp;
+      }
+
+      let batch: PFSInfoResponse;
+      try {
+        batch = await this.authenticatedGet<PFSInfoResponse>("/api/v1/pfs", query);
+      } catch (error) {
+        if (error instanceof FuelFinderApiError && this.isNoMorePfsDataError(error.details)) {
+          break;
+        }
+        throw error;
+      }
+
+      if (batch.length === 0) {
+        break;
+      }
+
+      allStations.push(...batch);
+      if (batch.length < batchSize) {
+        break;
+      }
+      batchNumber += 1;
+    }
+
+    return allStations;
+  }
+
+  /**
+   * Detect the API sentinel that indicates no more PFS data is available.
+   */
+  private isNoMorePfsDataError(details: unknown): boolean {
+    try {
+      return JSON.stringify(details).includes(
+        "All PFS data have been fetched successfully. No more data available.",
+      );
+    } catch {
+      return false;
+    }
   }
 }
