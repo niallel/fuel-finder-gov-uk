@@ -63,24 +63,26 @@ const assertPfsInfoResponse = (res: unknown) => {
 };
 
 describe.sequential("pfs endpoints against live API", () => {
+  const client = createClient();
+
   test("fetch all PFS fuel prices", async () => {
-    const res = await createClient().getAllPFSFuelPrices();
+    const res = await client.getAllPFSFuelPrices();
     assertFuelPricesResponse(res);
   });
 
   test("fetch incremental PFS fuel prices using a date-only string", async () => {
     // Use a future date so the live test validates accepted formats without large pagination runs.
-    const res = await createClient().getIncrementalPFSFuelPrices(FUTURE_EFFECTIVE_START);
+    const res = await client.getIncrementalPFSFuelPrices(FUTURE_EFFECTIVE_START);
     assertFuelPricesResponse(res);
   });
 
   test("fetch PFS info", async () => {
-    const res = await createClient().getPFSInfo();
+    const res = await client.getPFSInfo();
     assertPfsInfoResponse(res);
   });
 
   test("fetch incremental PFS info using a date-only string", async () => {
-    const res = await createClient().getIncrementalPFSInfo(FUTURE_EFFECTIVE_START);
+    const res = await client.getIncrementalPFSInfo(FUTURE_EFFECTIVE_START);
     assertPfsInfoResponse(res);
   });
 
@@ -94,12 +96,12 @@ describe.sequential("pfs endpoints against live API", () => {
   });
 
   test("accepts Date for incremental PFS fuel prices", async () => {
-    const res = await createClient().getIncrementalPFSFuelPrices(FUTURE_EFFECTIVE_START_DATE);
+    const res = await client.getIncrementalPFSFuelPrices(FUTURE_EFFECTIVE_START_DATE);
     assertFuelPricesResponse(res);
   });
 
   test("accepts Date for incremental PFS info", async () => {
-    const res = await createClient().getIncrementalPFSInfo(FUTURE_EFFECTIVE_START_DATE);
+    const res = await client.getIncrementalPFSInfo(FUTURE_EFFECTIVE_START_DATE);
     assertPfsInfoResponse(res);
   });
 

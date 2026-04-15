@@ -314,7 +314,9 @@ export class FuelFinderClient {
    * @returns Parsed response body.
    */
   private async authenticatedGet<T>(path: string, query?: Record<string, string>): Promise<T> {
-    for (let attempt = 0; attempt < 2; attempt += 1) {
+    const maxAttempts = 3;
+
+    for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
       await this.ensureAccessToken();
 
       const controller = this.timeoutMs ? new AbortController() : undefined;
@@ -345,7 +347,7 @@ export class FuelFinderClient {
           // The live API can revoke otherwise-valid tokens during long pagination runs.
           if (
             response.status === 403
-            && attempt === 0
+            && attempt < maxAttempts - 1
             && this.isExpiredOrRevokedTokenError(parsed)
           ) {
             this.tokenCache = undefined;
@@ -381,7 +383,7 @@ export class FuelFinderClient {
     }
 
     throw new FuelFinderApiError(
-      "Failed to refresh the access token after the API rejected it.",
+      "Failed to refresh the access token after repeated API rejections.",
       403,
     );
   }
