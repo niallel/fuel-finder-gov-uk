@@ -314,59 +314,76 @@ export class FuelFinderClient {
    * @returns Parsed response body.
    */
   private async authenticatedGet<T>(path: string, query?: Record<string, string>): Promise<T> {
-    await this.ensureAccessToken();
+    for (let attempt = 0; attempt < 2; attempt += 1) {
+      await this.ensureAccessToken();
 
-    const controller = this.timeoutMs ? new AbortController() : undefined;
-    const timeout = this.timeoutMs
-      ? setTimeout(() => controller?.abort(), this.timeoutMs)
-      : undefined;
+      const controller = this.timeoutMs ? new AbortController() : undefined;
+      const timeout = this.timeoutMs
+        ? setTimeout(() => controller?.abort(), this.timeoutMs)
+        : undefined;
 
-    try {
-      const url = new URL(path, this.baseUrl);
-      if (query) {
-        Object.entries(query).forEach(([key, value]) => url.searchParams.set(key, value));
-      }
+      try {
+        const url = new URL(path, this.baseUrl);
+        if (query) {
+          Object.entries(query).forEach(([key, value]) => url.searchParams.set(key, value));
+        }
 
-      const response = await this.fetchImpl(url.toString(), {
-        method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-          // Use the managed access token in the Authorization header.
-          Authorization: `${this.tokenCache!.tokenType} ${this.tokenCache!.accessToken}`,
-        },
-        signal: controller?.signal,
-      });
+        const response = await this.fetchImpl(url.toString(), {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+            // Use the managed access token in the Authorization header.
+            Authorization: `${this.tokenCache!.tokenType} ${this.tokenCache!.accessToken}`,
+          },
+          signal: controller?.signal,
+        });
 
-      const text = await response.text();
-      const parsed = text ? (JSON.parse(text) as T | ErrorResponse) : {};
+        const text = await response.text();
+        const parsed = text ? (JSON.parse(text) as T | ErrorResponse) : {};
 
-      if (!response.ok) {
-        throw new FuelFinderApiError(
-          `Fuel Finder API returned status ${response.status}.`,
-          response.status,
-          parsed,
-        );
-      }
+        if (!response.ok) {
+          // The live API can revoke otherwise-valid tokens during long pagination runs.
+          if (
+            response.status === 403
+            && attempt === 0
+            && this.isExpiredOrRevokedTokenError(parsed)
+          ) {
+            this.tokenCache = undefined;
+            continue;
+          }
 
-      return parsed as T;
-    } catch (error) {
-      if (error instanceof FuelFinderApiError) {
-        throw error;
-      }
+          throw new FuelFinderApiError(
+            `Fuel Finder API returned status ${response.status}.`,
+            response.status,
+            parsed,
+          );
+        }
 
-      if ((error as Error).name === "AbortError") {
-        throw new FuelFinderApiError(
-          "Request timed out.",
-          408,
-        );
-      }
+        return parsed as T;
+      } catch (error) {
+        if (error instanceof FuelFinderApiError) {
+          throw error;
+        }
 
-      throw new FuelFinderApiError("Failed to call the Fuel Finder API.", 0, error);
-    } finally {
-      if (timeout) {
-        clearTimeout(timeout);
+        if ((error as Error).name === "AbortError") {
+          throw new FuelFinderApiError(
+            "Request timed out.",
+            408,
+          );
+        }
+
+        throw new FuelFinderApiError("Failed to call the Fuel Finder API.", 0, error);
+      } finally {
+        if (timeout) {
+          clearTimeout(timeout);
+        }
       }
     }
+
+    throw new FuelFinderApiError(
+      "Failed to refresh the access token after the API rejected it.",
+      403,
+    );
   }
 
   /**
@@ -374,9 +391,9 @@ export class FuelFinderClient {
    */
   private formatEffectiveStartTimestamp(dateTime: string | Date): string {
     if (typeof dateTime === "string") {
-      if (!this.isFullTimestamp(dateTime)) {
+      if (!this.isAcceptedIncrementalTimestamp(dateTime)) {
         throw new Error(
-          "Invalid timestamp format for effective-start-timestamp. Expected YYYY-MM-DD HH:MM:SS.",
+          "Invalid timestamp format for effective-start-timestamp. Expected YYYY-MM-DD or YYYY-MM-DD HH:MM:SS.",
         );
       }
       return dateTime;
@@ -386,15 +403,33 @@ export class FuelFinderClient {
       throw new Error("Invalid Date provided for effective-start-timestamp.");
     }
 
-    // API expects YYYY-MM-DD HH:MM:SS; use UTC to avoid implicit timezone shifts.
+    // Use the full UTC timestamp format for Date inputs to avoid timezone drift.
     return dateTime.toISOString().replace("T", " ").replace(/\.\d{3}Z$/, "");
   }
 
   /**
-   * Ensure timestamp includes full date and time as required by the API.
+   * Accept the incremental timestamp formats supported by the live API.
    */
+  private isAcceptedIncrementalTimestamp(dateTime: string): boolean {
+    return this.isDateOnlyTimestamp(dateTime) || this.isFullTimestamp(dateTime);
+  }
+
+  private isDateOnlyTimestamp(dateTime: string): boolean {
+    return /^\d{4}-\d{2}-\d{2}$/.test(dateTime);
+  }
+
   private isFullTimestamp(dateTime: string): boolean {
     return /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/.test(dateTime);
+  }
+
+  private isExpiredOrRevokedTokenError(details: unknown): boolean {
+    try {
+      const serialized = JSON.stringify(details);
+      return serialized.includes("Token revoked or expired")
+        || serialized.includes("Invalid or expired token");
+    } catch {
+      return false;
+    }
   }
 
   /**
@@ -428,10 +463,18 @@ export class FuelFinderClient {
         query["effective-start-timestamp"] = effectiveStartTimestamp;
       }
 
-      const batch = await this.authenticatedGet<PFSFuelPricesResponse>(
-        "/api/v1/pfs/fuel-prices",
-        query,
-      );
+      let batch: PFSFuelPricesResponse;
+      try {
+        batch = await this.authenticatedGet<PFSFuelPricesResponse>(
+          "/api/v1/pfs/fuel-prices",
+          query,
+        );
+      } catch (error) {
+        if (error instanceof FuelFinderApiError && error.status === 404) {
+          break;
+        }
+        throw error;
+      }
 
       if (batch.length === 0) {
         break;
@@ -469,7 +512,10 @@ export class FuelFinderClient {
       try {
         batch = await this.authenticatedGet<PFSInfoResponse>("/api/v1/pfs", query);
       } catch (error) {
-        if (error instanceof FuelFinderApiError && this.isNoMorePfsDataError(error.details)) {
+        if (
+          error instanceof FuelFinderApiError
+          && (error.status === 404 || this.isNoMorePfsDataError(error.details))
+        ) {
           break;
         }
         throw error;

@@ -4,6 +4,8 @@ export default defineConfig({
   test: {
     environment: "node",
     testTimeout: 300000,
+    // The live Fuel Finder API can revoke tokens across parallel workers.
+    fileParallelism: false,
     include: [
       "tests/**/*.test.{ts,js}",
       "tests/**/*.spec.{ts,js}",

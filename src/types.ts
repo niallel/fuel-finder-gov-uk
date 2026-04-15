@@ -77,8 +77,8 @@ export interface PFSLocation {
   country: string | null;
   county: string | null;
   postcode: string | null;
-  latitude: string | null;
-  longitude: string | null;
+  latitude: number | null;
+  longitude: number | null;
 }
 
 export interface PFSDayOpening {
@@ -139,9 +139,10 @@ export interface FuelFinderEnvelope<T> {
 
 // Price entry for a specific fuel type at a station.
 export interface PFSFuelPriceEntry {
-  price: string | null;
+  price: number | null;
   fuel_type: string;
   price_last_updated: string | null;
+  price_change_effective_timestamp: string | null;
 }
 
 // Station entry returned by the fuel-prices endpoint.
