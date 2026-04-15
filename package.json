@@ -1,6 +1,6 @@
 {
   "name": "fuel-finder-gov-uk",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "description": "Javascript SDK for the UK Government Fuel Finder Recipient Service.",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -36,9 +36,9 @@
   },
   "license": "MIT",
   "devDependencies": {
-    "@types/node": "^25.0.9",
-    "dotenv": "^17.2.3",
-    "typescript": "^5.9.3",
-    "vitest": "^4.0.17"
+    "@types/node": "^25",
+    "dotenv": "^17.4.2",
+    "typescript": "^6.0.2",
+    "vitest": "^4.1.4"
   }
 }
