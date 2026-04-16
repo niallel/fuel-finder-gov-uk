@@ -51,3 +51,19 @@ test("retries a fuel-prices request until a later fresh token succeeds", async (
   await expect(client.getIncrementalPFSFuelPrices("2099-01-01")).resolves.toEqual([]);
   expect(fetchMock).toHaveBeenCalledTimes(6);
 });
+
+test("retries transient auth transport failures before fetching fuel prices", async () => {
+  const fetchMock = vi.fn();
+  fetchMock.mockRejectedValueOnce(new TypeError("fetch failed"));
+  fetchMock.mockResolvedValueOnce(jsonResponse(200, generatedToken("token-1", "refresh-1")));
+  fetchMock.mockResolvedValueOnce(jsonResponse(200, []));
+
+  const client = new FuelFinderClient({
+    clientId: "client-id",
+    clientSecret: "client-secret",
+    fetch: fetchMock as unknown as typeof globalThis.fetch,
+  });
+
+  await expect(client.getIncrementalPFSFuelPrices("2099-01-01")).resolves.toEqual([]);
+  expect(fetchMock).toHaveBeenCalledTimes(3);
+});

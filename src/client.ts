@@ -120,57 +120,65 @@ export class FuelFinderAuthClient {
     path: string,
     body: Record<string, string>,
   ): Promise<T> {
-    const controller = this.timeoutMs ? new AbortController() : undefined;
-    const timeout = this.timeoutMs
-      ? setTimeout(() => controller?.abort(), this.timeoutMs)
-      : undefined;
+    const maxAttempts = 3;
 
-    try {
-      // Build the full URL once to keep error messages consistent.
-      const url = new URL(path, this.baseUrl).toString();
-      const response = await this.fetchImpl(url, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(body),
-        signal: controller?.signal,
-      });
+    for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
+      const controller = this.timeoutMs ? new AbortController() : undefined;
+      const timeout = this.timeoutMs
+        ? setTimeout(() => controller?.abort(), this.timeoutMs)
+        : undefined;
 
-      const text = await response.text();
-      const parsed = text ? (JSON.parse(text) as T | ErrorResponse) : {};
+      try {
+        // Build the full URL once to keep error messages consistent.
+        const url = new URL(path, this.baseUrl).toString();
+        const response = await this.fetchImpl(url, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(body),
+          signal: controller?.signal,
+        });
 
-      if (!response.ok) {
-        throw new FuelFinderApiError(
-          `Fuel Finder API returned status ${response.status}.`,
-          response.status,
-          parsed,
-        );
-      }
+        const text = await response.text();
+        const parsed = text ? (JSON.parse(text) as T | ErrorResponse) : {};
 
-      return parsed as T;
-    } catch (error) {
-      if (error instanceof FuelFinderApiError) {
-        throw error;
-      }
+        if (!response.ok) {
+          throw new FuelFinderApiError(
+            `Fuel Finder API returned status ${response.status}.`,
+            response.status,
+            parsed,
+          );
+        }
 
-      if ((error as Error).name === "AbortError") {
-        throw new FuelFinderApiError(
-          `Request timed out after ${this.timeoutMs}ms.`,
-          408,
-        );
-      }
+        return parsed as T;
+      } catch (error) {
+        if (error instanceof FuelFinderApiError) {
+          throw error;
+        }
 
-      throw new FuelFinderApiError(
-        "Failed to call the Fuel Finder API.",
-        0,
-        error,
-      );
-    } finally {
-      if (timeout) {
-        clearTimeout(timeout);
+        if ((error as Error).name === "AbortError") {
+          throw new FuelFinderApiError(
+            `Request timed out after ${this.timeoutMs}ms.`,
+            408,
+          );
+        }
+
+        if (attempt === maxAttempts - 1) {
+          throw new FuelFinderApiError(
+            "Failed to call the Fuel Finder API.",
+            0,
+            error,
+          );
+        }
+      } finally {
+        if (timeout) {
+          clearTimeout(timeout);
+        }
       }
     }
+
+    throw new FuelFinderApiError("Failed to call the Fuel Finder API.", 0);
   }
 }
 
